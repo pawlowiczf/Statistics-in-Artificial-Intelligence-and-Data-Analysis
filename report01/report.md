@@ -1,6 +1,6 @@
 Filip Pawłowicz, 414324
 
-# Regresja liniowa i interakcje
+# Zadanie 1
 
 ## Zbiór danych Real Estate Valuation.
 
@@ -64,7 +64,9 @@ cor.test(df$dist_mrt, df$lon)
 ```
 
 Poniżej przedstawiam też przykładowo wykres ceny od odległości do stacji metra. Podobne wykresy wykonałem dla pozostałych cech.
-![price vs dist_mrt](images/real-estate-price-vs-dist.png)
+<center>
+![price vs dist_mrt](images/real-estate-price-vs-dist.png){width=80%}
+</center>
 
 Kolejnym niepożądanym zjawiskiem w modelach liniowych są obserwacje odstające. Wynika to z zastosowania MSE jako funkcji kosztu, która silnie karze duże błędy. W praktyce takie obserwacje powinny być usuwane z danych lub odpowiednio ograniczane, np. poprzez winsoryzację, czyli przycinanie wartości skrajnych do ustalonych progów. Zastosowałem drugą opcję. Poniżej przedstawiam kod do stworzenia wykresów pudełkowów oraz jeden przykładowy.
 
@@ -145,10 +147,163 @@ W = 0.92943, p-value = 4.543e-13
 
 ![Residuals vs fitted](images/real-estate-residuals-vs-fitted.png)
 
+## Zbiór danych Auto-MPG
+Dla tego modelu wykonałem podobne operacje. Analiza cech, zamiana zmiennych numerycznych na kategoryczne ('origin' i 'cylinders') oraz sprawdzenie pustych wartości w kolumnach.
+
+```r
+library(readr)
+library(corrplot)
+library(lmtest)
+
+df <- read_csv("auto-mpg.csv", na = "?")
+dim(df)
+head(df)
+summary(df)
+str(df)
+df$`car name` <- NULL
+
+df$origin    <- factor(df$origin)
+df$cylinders <- factor(df$cylinders)
+
+colSums(is.na(df))
+
+df <- na.omit(df)
+```
+
+Przedstawiam też kod do rysowania wykresów pudełkowych oraz zależności między zmiennymi, wstawiam przykładowe:
+
+![horse power](images/mpg-horsepower.png)
+
+![mpg vs horsepower](images/mpg-vs-horsepower.png)
+
+```r
+boxplot(df$mpg,          main = "mpg",          col = "steelblue")
+boxplot(df$displacement, main = "displacement",  col = "steelblue")
+boxplot(df$horsepower,   main = "horsepower",    col = "steelblue")
+boxplot(df$weight,       main = "weight",        col = "steelblue")
+boxplot(df$acceleration, main = "acceleration",  col = "steelblue")
+
+plot(df$weight, df$mpg, main = "mpg vs weight",
+     xlab = "weight", ylab = "mpg", col = "steelblue", pch = 16)
+abline(lm(mpg ~ weight, data = df), col = "red", lwd = 2)
+
+plot(df$horsepower, df$mpg, main = "mpg vs horsepower",
+     xlab = "horsepower", ylab = "mpg", col = "steelblue", pch = 16)
+abline(lm(mpg ~ horsepower, data = df), col = "red", lwd = 2)
+
+plot(df$displacement, df$mpg, main = "mpg vs displacement",
+     xlab = "displacement", ylab = "mpg", col = "steelblue", pch = 16)
+abline(lm(mpg ~ displacement, data = df), col = "red", lwd = 2)
+```
+
+![corr](images/mpg-corr.png)
+
+```r
+> print(round(cor_matrix, 2))
+               mpg displacement horsepower weight acceleration model year
+mpg           1.00        -0.81      -0.78  -0.83         0.42       0.58
+displacement -0.81         1.00       0.90   0.93        -0.54      -0.37
+horsepower   -0.78         0.90       1.00   0.86        -0.69      -0.42
+weight       -0.83         0.93       0.86   1.00        -0.42      -0.31
+acceleration  0.42        -0.54      -0.69  -0.42         1.00       0.29
+model year    0.58        -0.37      -0.42  -0.31         0.29       1.00
+```
+Widać pewne ujemne korelacji, ale nie ma żadnej >0.9, więc nie będe usuwać żadnej cechy. Na wykresie pudełkowym `horsepower` widać kilka outlierów, więc w tym zbiorze jest trochę takich wierszy - dokonam także winsoryzacji.
+
+```r
+> summary(model_multi)
+
+Call:
+lm(formula = mpg ~ displacement + horsepower + weight + acceleration +
+    `model year` + origin, data = df)
+
+Residuals:
+    Min      1Q  Median      3Q     Max
+-8.7347 -2.1205 -0.0653  1.9576 13.2773
+
+Coefficients:
+               Estimate Std. Error t value Pr(>|t|)
+(Intercept)  -1.806e+01  4.663e+00  -3.873 0.000126 ***
+displacement  1.685e-02  5.777e-03   2.918 0.003734 **
+horsepower   -2.424e-02  1.487e-02  -1.631 0.103744
+weight       -6.611e-03  6.756e-04  -9.785  < 2e-16 ***
+acceleration  4.918e-02  1.013e-01   0.485 0.627624
+`model year`  7.719e-01  5.193e-02  14.864  < 2e-16 ***
+origin2       2.615e+00  5.645e-01   4.632 4.98e-06 ***
+origin3       2.825e+00  5.494e-01   5.142 4.33e-07 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 3.306 on 384 degrees of freedom
+Multiple R-squared:  0.8237,	Adjusted R-squared:  0.8205
+F-statistic: 256.4 on 7 and 384 DF,  p-value: < 2.2e-16
+
+>
+> model_interact <- lm(mpg ~ weight * horsepower + displacement +
++                        acceleration + `model year` + origin,
++                      data = df)
+> summary(model_interact)
+
+Call:
+lm(formula = mpg ~ weight * horsepower + displacement + acceleration +
+    `model year` + origin, data = df)
+
+Residuals:
+    Min      1Q  Median      3Q     Max
+-8.1670 -1.6483 -0.1109  1.6162 12.2015
+
+Coefficients:
+                    Estimate Std. Error t value Pr(>|t|)
+(Intercept)        2.544e+00  4.541e+00   0.560 0.575684
+weight            -1.136e-02  7.443e-04 -15.260  < 2e-16 ***
+horsepower        -2.366e-01  2.391e-02  -9.892  < 2e-16 ***
+displacement       7.929e-03  5.154e-03   1.538 0.124825
+acceleration      -1.018e-01  9.031e-02  -1.128 0.260158
+`model year`       7.872e-01  4.574e-02  17.212  < 2e-16 ***
+origin2            1.686e+00  5.046e-01   3.342 0.000914 ***
+origin3            1.663e+00  4.959e-01   3.354 0.000875 ***
+weight:horsepower  5.611e-05  5.290e-06  10.608  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 2.911 on 383 degrees of freedom
+Multiple R-squared:  0.8638,	Adjusted R-squared:  0.8609
+F-statistic: 303.6 on 8 and 383 DF,  p-value: < 2.2e-16
+```
+
+Dla modelu pełnego istotne zmienne to `weight`, `model year` oraz `origin` - natomiast `horsepower` i `acceleration` okazały się nieistotne.
+
+Model z interakcją `weight * horsepower` poprawia dopasowanie. Interakcja jest bardzo istotna (p < 2e-16), co oznacza że wpływ masy na MPG zależy od mocy silnika - w ciężkich autach z dużą mocą efekt jest inny niż w lekkich. Dodatkowo `horsepower` staje się istotny dopiero gdy uwzględnimy jego interakcję z `weight`. `displacement` i `acceleration` pozostają nieistotne w obu modelach.
+
+Na podstawie kryterium AIC model z interakcją jest lepszy i to jego używam w dalszej analizie.
+
+```r
+AIC(model_multi, model_interact)
+
+plot(model_interact, which = 1)
+
+dwtest(model_interact)
+
+bptest(model_interact)
+
+shapiro.test(residuals(model_interact))
+```
+
+Liniowość sprawdzam wykresem Residuals vs Fitted - widać lekką krzywą, podobnie jak w zbiorze Real Estate, co sugeruje nieliniową zależność niektórych predyktorów od MPG.
+
+Test Durbina-Watsona daje DW = 1.475, p < 0.001, co oznacza obecność dodatniej autokorelacji reszt. Jest to prawdopodobnie spowodowane tym że dane są uporządkowane chronologicznie - samochody z podobnych lat mają podobne MPG.
+
+Test Breuscha-Pagana daje p < 0.001, co oznacza heteroskedastyczność - wariancja reszt nie jest stała. Może to wynikać z tego że model lepiej przewiduje MPG dla aut o średnim spalaniu niż dla skrajnych wartości.
+
+Test Shapiro-Wilka daje p < 0.001, co oznacza że reszty nie mają rozkładu normalnego.
+
+Wszystkie trzy założenia są naruszone.
+
 # Regresja Poissonowska
 
 ## Funkcja wiarygodności dla regresji Poissonowskiej
 
+### Zadanie 1
 
 Dla pojedynczej obserwacji $y_i$, prawdopodobieństwo że przyjmie ona wartość $y_i$ wynosi:
 $$P(Y_i = y_i) = \frac{\lambda_i^{y_i} \cdot e^{-\lambda_i}}{y_i!}$$
@@ -179,6 +334,8 @@ Niech $\eta_i = a_0 + a_1 X_{i1} + \cdots + a_p X_{ip}$, otrzymujemy postać skr
 $$\ell = \sum_{i=1}^{n} \left[ y_i \cdot \eta_i - e^{\eta_i} - \log(y_i!) \right]$$
 
 Czynnik $\log(y_i!)$ można pominąć - nie zależy od parametrów.
+
+### Zadanie 2
 
 ```r
 df <- read.table("poisson.data", header = TRUE, sep = ";", dec = ",")
@@ -243,7 +400,7 @@ Null deviance: 9945.17  on 99  degrees of freedom
 Residual deviance:  101.89  on 98  degrees of freedom
 ```
 
-# Ships Data
+# Zadanie 3
 
 W tym przypadku będe modelować częstosć wypadków, czyli liczbę wypadków na jednostkę czasu, a nie samą liczbę wypadków, ze względu na zmienną objaśniająca `period`. Gdy statek jest dłużej eksploatowany, to może mieć więcej wypadków. `period` będzie stanowić tzw. offset w regresji Poissonowskiej.
 
@@ -338,7 +495,7 @@ W = 0.94061, p-value = 0.06427
 
 Tak, jest spełnione załóżenie reszt dot. ich normalności, co potwierdza Test Shapiro-Wilka.
 
-# Esoph
+# Zadanie 4
 
 Podobnie, jak powyżej, mamy doczynienia z danymi kategorycznymi oraz zmienną `ncontrols` - liczba osób zdrowych, która będzie służyć, jako offset. Przekształciłem je na odpowiednie typy, dokonałem też pewnej selekcji i inżynieri cech, biorąc tylko wiersze z `ncases` i `ncontrols`, które są dodatnie.
 
@@ -360,7 +517,10 @@ esoph_df$tobgp <- factor(esoph_df$tobgp, ordered = FALSE)
 esoph_df <- subset(esoph_df, ncontrols > 0)
 esoph_df <- subset(esoph_df, ncases > 0)
 
-model_esoph <- glm(ncases ~ agegp + alcgp + tobgp + offset(log(ncontrols)), data = esoph_df, family = poisson)
+model_esoph <- glm(ncases ~ agegp + alcgp + tobgp + offset(log(ncontrols)),
+  data = esoph_df,
+  family = poisson
+)
 
 summary(model_esoph)
 ```
@@ -438,7 +598,7 @@ Test Shapiro-Wilka dał wynik W = 0.974, p = 0.371. Ponieważ p > 0.05, nie ma p
 
 Oba wyniki potwierdzają że model jest dobrze dopasowany do danych.
 
-# CLM Data
+# Zadanie 5
 
 ```r
 library(ordinal)
@@ -489,7 +649,7 @@ Threshold coefficients:
 
 Widać także progi ('threshold coefficients'). Są to granice między kolejnymi kategoriami satysfakcji. Podsumowując, model jest słabo dopasowany - żadna zmienna nie jest istotna.
 
-# Wine data
+# Zadanie 6
 
 ```r
 data(wine, package = "ordinal")
@@ -515,7 +675,7 @@ Przekształciłem ratingu na zmienną binarną (wartości < 4 jako 0, wartości 
 - `tempwarm`: 3.0312 w obu modelach
 - `contactyes`: 1.8102 w obu modelach
 
-Różnica pojawia się tylko w intercepcie - CLM zapisuje go jako próg `0|1 = 4.072`, regresja logistyczna jako `(Intercept) = -4.072`. Odwrotny znak wynika z tego że modele pracują w przeciwnych kierunkach: CLM modeluje P(Y ≤ kategorii), a regresja logistyczna P(Y = 1).
+Różnica pojawia się tylko w intercepcie - CLM zapisuje go jako próg `0|1 = 4.072`, regresja logistyczna jako `(Intercept) = -4.072`. Odwrotny znak wynika z tego że modele pracują w przeciwnych kierunkach: CLM modeluje P(Y <= kategorii), a regresja logistyczna P(Y = 1).
 
 Gdy zmienna zależna ma tylko dwie kategorie, oba modele są matematycznie równoważne. CLM ma przewagę gdy kategorii jest więcej niż dwie - wtedy regresja logistyczna nie wystarczy.
 
@@ -595,3 +755,72 @@ Logistic coefficients:
 (Intercept)    tempwarm  contactyes
   -4.071873    3.031189    1.810247
 ```
+
+# Wzory, miary
+
+## Słownik miar i statystyk
+
+
+### AIC (Akaike Information Criterion)
+
+$$AIC = 2k - 2\ln(L)$$
+
+gdzie $k$ to liczba parametrów modelu, a $L$ to wartość funkcji wiarygodności. Służy do porównywania modeli - im niższe AIC tym lepszy model. Kara za liczbę parametrów zapobiega przeuczeniu.
+
+---
+
+### Test korelacji Pearsona
+
+$$r = \frac{\sum(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum(x_i - \bar{x})^2 \sum(y_i - \bar{y})^2}}$$
+
+Mierzy siłę liniowej zależności między dwiema zmiennymi. Wartości od -1 do 1 - im bliżej -1 lub 1 tym silniejsza zależność. Test sprawdza czy korelacja jest istotnie różna od zera (H0: r = 0).
+
+---
+
+### Test Shapiro-Wilka
+
+$$W = \frac{\left(\sum_{i=1}^{n} a_i x_{(i)}\right)^2}{\sum_{i=1}^{n}(x_i - \bar{x})^2}$$
+
+Sprawdza czy dane mają rozkład normalny. H0: dane są normalne. Jeśli p > 0.05 - brak podstaw do odrzucenia normalności.
+
+---
+
+### Test Durbina-Watsona
+
+$$DW = \frac{\sum_{i=2}^{n}(e_i - e_{i-1})^2}{\sum_{i=1}^{n} e_i^2}$$
+
+Sprawdza autokorelację reszt. Wartość bliska 2 oznacza brak autokorelacji. Wartość bliska 0 to dodatnia autokorelacja, bliska 4 to ujemna autokorelacja.
+
+---
+
+### Test Breuscha-Pagana
+
+Sprawdza homoskedastyczność - czy wariancja reszt jest stała. H0: wariancja jest stała (homoskedastyczność). Jeśli p < 0.05 - wariancja nie jest stała (heteroskedastyczność).
+
+$$BP = n \cdot R^2_{reszt}$$
+
+gdzie $R^2_{reszt}$ pochodzi z regresji kwadratów reszt na zmienne objaśniające.
+
+---
+
+### Deviance Residuals (reszty dewiancji)
+
+$$d_i = \text{sign}(y_i - \hat{\lambda}_i) \cdot \sqrt{2\left[y_i \log\frac{y_i}{\hat{\lambda}_i} - (y_i - \hat{\lambda}_i)\right]}$$
+
+Odpowiednik zwykłych reszt dla modeli GLM. Większość wartości powinna mieścić się w przedziale (-2, 2). Wartości powyżej 3 lub poniżej -3 sygnalizują problematyczne obserwacje.
+
+---
+
+### Null deviance i Residual deviance
+
+$$D = 2\left[\ell(\text{model saturowany}) - \ell(\text{model})\right]$$
+
+Null deviance mierzy dopasowanie modelu bez żadnych predyktorów (tylko średnia). Residual deviance mierzy dopasowanie naszego modelu. Im większa różnica między nimi tym więcej zmienności wyjaśniają predyktory. Residual deviance zbliżona do liczby stopni swobody świadczy o dobrym dopasowaniu.
+
+---
+
+### Log-funkcja wiarygodności (dla regresji Poissonowskiej)
+
+$$\ell = \sum_{i=1}^{n}\left[y_i \cdot \eta_i - e^{\eta_i} - \log(y_i!)\right]$$
+
+gdzie $\eta_i = a_0 + a_1X_{i1} + \cdots + a_pX_{ip}$ to predyktor liniowy. Maksymalizacja tej funkcji daje optymalne parametry modelu.

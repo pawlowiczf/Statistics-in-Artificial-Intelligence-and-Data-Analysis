@@ -14,7 +14,6 @@ summary(model_wine)
 
 wine$rating_binary <- ifelse(as.numeric(wine$rating) < 4, 0, 1)
 
-
 table(wine$rating_binary)
 
 wine$rating_binary_factor <- factor(wine$rating_binary, ordered = TRUE)
