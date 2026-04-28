@@ -9,7 +9,7 @@ summary(fit_poly_raw)
 age_lims <- range(Wage$age)
 age_grid <- seq(age_lims[1], age_lims[2])
 pred_poly <- predict(fit_poly, list(age = age_grid), se.fit = TRUE)
-se_bands <- cbind(pred_poly$fit + 2 * pred_poly$se.fit, 
+se_bands <- cbind(pred_poly$fit + 2 * pred_poly$se.fit,
                   pred_poly$fit - 2 * pred_poly$se.fit)
 plot(Wage$age, Wage$wage, col = "darkgrey", cex = 0.5, xlim = age_lims)
 lines(age_grid, pred_poly$fit, col = "red", lwd = 2)
@@ -22,7 +22,7 @@ pred_probs <- plogis(pred_log_poly$fit)
 se_bands_logit <- cbind(pred_log_poly$fit + 2 * pred_log_poly$se.fit,
                         pred_log_poly$fit - 2 * pred_log_poly$se.fit)
 se_bands <- plogis(se_bands_logit)
-plot(Wage$age, I(Wage$wage > 250), xlim = age_lims, ylim = c(0, 0.2), 
+plot(Wage$age, I(Wage$wage > 250), xlim = age_lims, ylim = c(0, 0.2),
      col = "darkgrey", cex = 0.5, ylab = "P(wage > 250 | age)")
 lines(age_grid, pred_probs, col = "red", lwd = 2)
 matlines(age_grid, se_bands, lty = "dashed", col = "red")
@@ -33,7 +33,7 @@ table(cut(Wage$age, breaks = 4))
 
 fit_step <- lm(wage ~ cut(age, 4), data = Wage)
 pred_step <- predict(fit_step, list(age = age_grid), se.fit = TRUE)
-se_bands <- cbind(pred_step$fit + 2 * pred_step$se.fit, 
+se_bands <- cbind(pred_step$fit + 2 * pred_step$se.fit,
                   pred_step$fit - 2 * pred_step$se.fit)
 plot(Wage$age, Wage$wage, col = "darkgrey", cex = 0.5, xlim = age_lims)
 lines(age_grid, pred_step$fit, col = "red", lwd = 2)
