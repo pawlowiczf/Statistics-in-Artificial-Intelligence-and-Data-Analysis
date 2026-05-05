@@ -2,8 +2,8 @@ library(rpart)
 library(rpart.plot)
 library(ISLR)
 
-CarseatsH <- 
-  Carseats |> 
+CarseatsH <-
+  Carseats |>
   transform(High = factor(ifelse(Sales <= 8, "No", "Yes")))
 head(CarseatsH)
 
